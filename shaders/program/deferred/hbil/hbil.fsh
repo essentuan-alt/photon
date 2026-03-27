@@ -205,6 +205,12 @@ void main() {
 	vec3 viewPos = screenToViewPos(coord, depth, true);
 	vec3 scenePos = transform(gbufferModelViewInverse, viewPos);
 
+ #ifdef PHOTONICS_ENABLED && defined PHOTONICS
+    bool is_lod = length(scenePos) > far;
+#else
+    const bool is_lod = true;
+#endif
+
 	/* -- indirect lighting -- */
 
 	vec2 rng = R2(frameCounter, dither);
@@ -216,22 +222,28 @@ void main() {
 
 	// Sunlight GI
 
-	vec3 shadowViewPos = transform(shadowModelView, scenePos);
-	vec3 sunlight = getBouncedSunlight(shadowViewPos, worldNormal, rng, lmCoord.y);
+    if (is_lod) {
+        vec3 shadowViewPos = transform(shadowModelView, scenePos);
+        vec3 sunlight = getBouncedSunlight(shadowViewPos, worldNormal, rng, lmCoord.y);
 
-	irradiance += ao.w * directIrradiance * sunlight;
+        irradiance += ao.w * directIrradiance * sunlight;
+    }
 
 	// Blocklight
 
-	vec3 blocklightColor = blackbody(BLOCKLIGHT_TEMPERATURE);
-	float blocklightFalloff = adjustBlocklight(lmCoord.x, ao.w);
-	irradiance += 32.0 * blocklightColor * blocklightFalloff;
+    if (is_lod) {
+        vec3 blocklightColor = blackbody(BLOCKLIGHT_TEMPERATURE);
+        float blocklightFalloff = adjustBlocklight(lmCoord.x, ao.w);
+        irradiance += 32.0 * blocklightColor * blocklightFalloff;
+    }
 
 	// Skylight
 
-	vec3 skylight = evaluateSphericalHarmonicsIrradiance(skySh, ao.xyz, ao.w);
+    if (is_lod) {
+        vec3 skylight = evaluateSphericalHarmonicsIrradiance(skySh, ao.xyz, ao.w);
 
-	irradiance += adjustSkylight(lmCoord.y) * skylight;
+        irradiance += adjustSkylight(lmCoord.y) * skylight;
+    }
 
 	// Ambient light
 

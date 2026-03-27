@@ -11,6 +11,7 @@
 
 #include "/include/utility/fastMath.glsl"
 #include "/include/utility/spaceConversion.glsl"
+#include "/photonics/ph_samplers.glsl"
 
 const float skylightBoost       = 1.0;
 const float blocklightIntensity = 64.0 * BLOCKLIGHT_INTENSITY;
@@ -97,6 +98,7 @@ vec3 getSceneLighting(
 ) {
 	ao = 1.0;
 	vec3 radiance = material.emission * emissionIntensity;
+	bool is_lod = length(scenePos) > far;
 
 	// Sunlight/moonlight
 
@@ -156,6 +158,22 @@ vec3 getSceneLighting(
 #endif
 
 	vec3 bsdf = material.albedo * rcpPi * float(!material.isMetal);
+
+#if defined PROGRAM_DEFERRED_LIGHTING && defined PHOTONICS_ENABLED && defined PHOTONICS
+	if (!is_lod) {
+
+#if defined INDIRECT_LIGHTING && defined PHOTONICS_ENABLED && (!defined RESTIR_COMBINED_GI || LIGHTING_MODE == 0)
+		radiance+= texture(radiosityIndirect, coord).rgb * bsdf;
+#endif
+
+		vec3 direct = sample_photonics_direct(coord);
+		direct += sample_photonics_handheld(coord);
+		direct *= 4.7f;
+		direct *= bsdf;
+
+		radiance+= direct;
+	}
+#endif
 
 #if defined PROGRAM_DEFERRED_LIGHTING && defined INDIRECT_LIGHTING
 	// Indirect lighting already computed alongside HBIL

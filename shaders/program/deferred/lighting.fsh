@@ -32,6 +32,10 @@ uniform sampler2D colortex7;  // Clear sky
 uniform sampler2D colortex8;  // Scene history
 uniform sampler2D colortex15; // Cloud shadow map
 
+#if defined INDIRECT_LIGHTING && defined PHOTONICS && defined PHOTONICS_ENABLED && (!defined RESTIR_COMBINED_GI || LIGHTING_MODE == 0)
+uniform sampler2D radiosityIndirect;
+#endif
+
 uniform sampler2D lodDepthTex1;
 
 uniform sampler2D shadowtex0;
